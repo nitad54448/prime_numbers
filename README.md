@@ -34,8 +34,3 @@ The application is built with HTML, Tailwind CSS, and plain JavaScript, renderin
 
 4. Resize Panel: Drag the vertical bar between the left control panel and the right canvas to resize the viewing area.
 
-## Technical Notes
-
-* The `isPrime` function correctly identifies that 1 is not a prime number, as per the mathematical definition. A prime number must be a natural number greater than 1 with exactly two distinct positive divisors: 1 and itself.
-
-* The application uses the HTML `<canvas>` element for rendering, providing a fast and efficient drawing surface.
