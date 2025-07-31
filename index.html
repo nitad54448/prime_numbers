@@ -67,14 +67,13 @@
     </header>
 
     <div class="main-container">
-        <!-- Left Control Panel -->
         <div id="left-panel">
             <div>
                 <h2 class="text-lg font-semibold text-white mb-3 border-b border-gray-600 pb-2">Controls</h2>
                 <div class="space-y-4">
                     <div>
                         <label for="numPrimes" class="block text-sm font-medium text-gray-300">Numbers to Check: <span id="numPrimesValue">100</span></label>
-                        <input id="numPrimes" type="range" min="0" max="100" value="45" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                        <input id="numPrimes" type="range" min="0" max="100" value="27" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
                     </div>
                     <div>
                         <label for="dotSize" class="block text-sm font-medium text-gray-300">Dot Size: <span id="dotSizeValue">2</span>px</label>
@@ -93,10 +92,8 @@
             </footer>
         </div>
 
-        <!-- Draggable Handle -->
         <div id="resize-handle"></div>
 
-        <!-- Right Canvas Panel -->
         <div id="right-panel">
             <canvas id="primeCanvas"></canvas>
         </div>
@@ -159,6 +156,31 @@
             document.addEventListener('mousemove', (e) => { if (isResizing) { const newWidth = e.clientX; if (newWidth > 250 && newWidth < window.innerWidth - 250) { leftPanel.style.flexBasis = `${newWidth}px`; resizeCanvas(); } } });
             document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; document.body.style.userSelect = ''; });
             window.addEventListener('resize', resizeCanvas);
+
+            // --- MOUSE WHEEL EVENT LISTENER ---
+            canvas.addEventListener('wheel', (e) => {
+                // Prevent the default browser action (scrolling the page).
+                e.preventDefault();
+
+                // Get the current slider value as a number.
+                let currentValue = parseInt(dotSizeSlider.value);
+
+                // Decrease value for scrolling down (e.deltaY > 0), increase for scrolling up.
+                if (e.deltaY > 0) {
+                    currentValue--;
+                } else {
+                    currentValue++;
+                }
+
+                // Clamp the value to stay within the slider's min/max bounds (1-10).
+                dotSizeSlider.value = Math.max(1, Math.min(10, currentValue));
+
+                // Manually trigger the 'input' and 'change' events to update the UI 
+                // and redraw the spiral, ensuring the application behaves as if you 
+                // moved the slider yourself.
+                dotSizeSlider.dispatchEvent(new Event('input'));
+                dotSizeSlider.dispatchEvent(new Event('change'));
+            }, { passive: false }); // { passive: false } is needed for preventDefault to work
 
             /**
              * Checks if a number is prime.
