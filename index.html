@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prime Number Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0c0a09;
+            overflow: hidden;
+        }
+        .main-container {
+            display: flex;
+            height: calc(100vh - 65px);
+        }
+        #left-panel {
+            flex-basis: 320px;
+            flex-shrink: 0;
+            min-width: 250px;
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+        #resize-handle {
+            flex-basis: 6px;
+            flex-shrink: 0;
+            cursor: col-resize;
+            background-color: rgba(55, 65, 81, 0.5);
+            transition: background-color 0.2s ease;
+        }
+        #resize-handle:hover {
+            background-color: rgba(30, 144, 255, 0.7);
+        }
+        #right-panel {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+            background-color: #0c0a09;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            background-color: #111827;
+        }
+        #left-panel::-webkit-scrollbar { width: 8px; }
+        #left-panel::-webkit-scrollbar-track { background: #1f2937; }
+        #left-panel::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        #left-panel::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    </style>
+</head>
+<body class="text-gray-200 flex flex-col h-screen">
+
+    <header class="text-center py-4 bg-gray-900/80 border-b border-gray-700/50" style="flex-shrink: 0;">
+        <h1 class="text-2xl md:text-3xl text-white">Prime Number Visualizer</h1>
+    </header>
+
+    <div class="main-container">
+        <!-- Left Control Panel -->
+        <div id="left-panel">
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3 border-b border-gray-600 pb-2">Controls</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label for="numPrimes" class="block text-sm font-medium text-gray-300">Numbers to Check: <span id="numPrimesValue">100</span></label>
+                        <input id="numPrimes" type="range" min="0" max="100" value="45" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <label for="dotSize" class="block text-sm font-medium text-gray-300">Dot Size: <span id="dotSizeValue">2</span>px</label>
+                        <input id="dotSize" type="range" min="1" max="10" value="2" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+                <div class="mt-6 pt-4 border-t border-gray-600">
+                     <h3 class="text-md font-semibold text-white mb-2">The Ulam Spiral</h3>
+                     <p id="description" class="text-gray-400 text-sm">
+                        This visualization arranges numbers in a square spiral. Prime numbers are then highlighted, revealing intriguing diagonal patterns. Set numbers to 100 or less to see a tutorial view.
+                     </p>
+                </div>
+            </div>
+            <footer class="mt-auto pt-4">
+                <p class="text-xs text-gray-500 text-center">NitaD, Univ Paris-Saclay, 2025</p>
+            </footer>
+        </div>
+
+        <!-- Draggable Handle -->
+        <div id="resize-handle"></div>
+
+        <!-- Right Canvas Panel -->
+        <div id="right-panel">
+            <canvas id="primeCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element References ---
+            const canvas = document.getElementById('primeCanvas');
+            const ctx = canvas.getContext('2d');
+            const leftPanel = document.getElementById('left-panel');
+            const rightPanel = document.getElementById('right-panel');
+            const resizeHandle = document.getElementById('resize-handle');
+            const numPrimesSlider = document.getElementById('numPrimes');
+            const numPrimesValueSpan = document.getElementById('numPrimesValue');
+            const dotSizeSlider = document.getElementById('dotSize');
+            const dotSizeValueSpan = document.getElementById('dotSizeValue');
+
+            // --- State Variables ---
+            let isResizing = false;
+            let dotSize = 2;
+            let maxNumber = 100;
+
+            // --- Logarithmic Slider Configuration ---
+            const minNumber = 10;
+            const maxNumberLog = 50000;
+
+            function getLogValue(position) {
+                if (position == 0) return minNumber;
+                const minp = 0;
+                const maxp = 100;
+                const minv = Math.log(minNumber);
+                const maxv = Math.log(maxNumberLog);
+                const scale = (maxv - minv) / (maxp - minp);
+                return Math.round(Math.exp(minv + scale * (position - minp)));
+            }
+            
+            function updateMaxNumber() {
+                const position = parseInt(numPrimesSlider.value);
+                maxNumber = getLogValue(position);
+                numPrimesValueSpan.textContent = maxNumber;
+            }
+
+            function resizeCanvas() {
+                canvas.width = rightPanel.clientWidth;
+                canvas.height = rightPanel.clientHeight;
+                drawSpiral(); // Redraw on resize
+            }
+
+            // --- Event Listeners ---
+            numPrimesSlider.addEventListener('input', updateMaxNumber);
+            numPrimesSlider.addEventListener('change', drawSpiral);
+            dotSizeSlider.addEventListener('input', (e) => {
+                dotSize = parseInt(e.target.value);
+                dotSizeValueSpan.textContent = dotSize;
+            });
+            dotSizeSlider.addEventListener('change', drawSpiral);
+
+            resizeHandle.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; });
+            document.addEventListener('mousemove', (e) => { if (isResizing) { const newWidth = e.clientX; if (newWidth > 250 && newWidth < window.innerWidth - 250) { leftPanel.style.flexBasis = `${newWidth}px`; resizeCanvas(); } } });
+            document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; document.body.style.userSelect = ''; });
+            window.addEventListener('resize', resizeCanvas);
+
+            /**
+             * Checks if a number is prime.
+             * @param {number} num - The number to check.
+             * @returns {boolean} - True if prime, false otherwise.
+             */
+            function isPrime(num) {
+                if (num <= 1) return false;
+                if (num <= 3) return true;
+                if (num % 2 === 0 || num % 3 === 0) return false;
+                for (let i = 5; i * i <= num; i = i + 6) {
+                    if (num % i === 0 || num % (i + 2) === 0) return false;
+                }
+                return true;
+            }
+
+            /**
+             * Draws the Ulam spiral on the canvas.
+             */
+            function drawSpiral() {
+                ctx.fillStyle = '#111827';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                if (maxNumber <= 100) {
+                    drawTutorialSpiral();
+                } else {
+                    drawNormalSpiral();
+                }
+            }
+
+            function drawNormalSpiral() {
+                let x = canvas.width / 2;
+                let y = canvas.height / 2;
+                
+                let step = dotSize + 1; // Spacing between numbers
+                let numSteps = 1;
+                let state = 0; // 0: right, 1: up, 2: left, 3: down
+                let turnCounter = 0;
+
+                ctx.fillStyle = 'hsl(60, 100%, 50%)'; // Bright yellow for primes
+
+                for (let n = 1; n <= maxNumber; n++) {
+                    if (isPrime(n)) {
+                        ctx.beginPath();
+                        ctx.arc(x, y, dotSize / 2, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+
+                    // Move according to the spiral path
+                    switch (state) {
+                        case 0: x += step; break; // Right
+                        case 1: y -= step; break; // Up
+                        case 2: x -= step; break; // Left
+                        case 3: y += step; break; // Down
+                    }
+
+                    // Check if it's time to turn
+                    if (n % numSteps === 0) {
+                        state = (state + 1) % 4;
+                        turnCounter++;
+                        if (turnCounter % 2 === 0) {
+                            numSteps++;
+                        }
+                    }
+                }
+            }
+
+            function drawTutorialSpiral() {
+                let x = canvas.width / 2;
+                let y = canvas.height / 2;
+                
+                let step = Math.max(20, dotSize * 5); // Larger step for tutorial
+                let numSteps = 1;
+                let state = 0; // 0: right, 1: up, 2: left, 3: down
+                let turnCounter = 0;
+                
+                const fontSize = Math.max(10, step / 2.5);
+                ctx.font = `${fontSize}px Poppins`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                let lastX = x;
+                let lastY = y;
+
+                for (let n = 1; n <= maxNumber; n++) {
+                    const prime = isPrime(n);
+
+                    // Draw connecting line
+                    ctx.beginPath();
+                    ctx.moveTo(lastX, lastY);
+                    ctx.lineTo(x, y);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    lastX = x;
+                    lastY = y;
+
+                    // Draw number
+                    ctx.fillStyle = prime ? 'hsl(60, 100%, 50%)' : 'rgba(255, 255, 255, 0.4)';
+                    ctx.fillText(n, x, y);
+                    
+                    // Move according to the spiral path
+                    switch (state) {
+                        case 0: x += step; break; // Right
+                        case 1: y -= step; break; // Up
+                        case 2: x -= step; break; // Left
+                        case 3: y += step; break; // Down
+                    }
+
+                    // Check if it's time to turn
+                    if (n % numSteps === 0) {
+                        state = (state + 1) % 4;
+                        turnCounter++;
+                        if (turnCounter % 2 === 0) {
+                            numSteps++;
+                        }
+                    }
+                }
+            }
+
+            // --- Initial Setup ---
+            updateMaxNumber();
+            resizeCanvas();
+        });
+    </script>
+</body>
+</html>
